@@ -7,8 +7,7 @@
 4. run main.py using this environment to start GUI
 5. use 'deactivate' to exit virtual environment
 
-<code>python -m venv env
-    <br>env\Scripts\activate
-    <br>pip install -r requirements.txt
-    <br>python main.py
-</code>
+<code>python -m venv env  
+env\Scripts\activate  
+pip install -r requirements.txt  
+python main.py</code>
