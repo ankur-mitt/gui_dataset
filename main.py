@@ -1,32 +1,27 @@
 import sys
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QPixmap, QIcon
+from PySide6.QtGui import QPixmap, QIcon, QFont
 from PySide6.QtWidgets import (QApplication, QWidget, QFrame, QLabel, QVBoxLayout, QHBoxLayout, QScrollArea,
                                QGridLayout, QFileDialog, QPushButton)
-
-
-def debug(element):
-    element.setStyleSheet('background-color: black;')
 
 
 class TopBar(QFrame):
     def __init__(self):
         super().__init__()
-        self.resize(1000, 75)
 
         # components creation
         image = QLabel()
-        image.setPixmap(QPixmap('resources/images/main_logo.png').scaled(68, 75))
-        image.setFixedWidth(90)
-        image.setAlignment(Qt.AlignCenter)
+        image.setPixmap(QPixmap('resources/images/main_logo.png').scaledToHeight(75))  # maintain aspect ratio
 
-        heading = QLabel(text='<font size=30>GUI to manipulate and update dataset</font>')
-        heading.setAlignment(Qt.AlignCenter)
+        heading = QLabel('GUI to manipulate (add augmentation) and update dataset')
+        heading_font = QFont()
+        heading_font.setPixelSize(28)
+        heading.setFont(heading_font)
 
-        # adding to layout
-        layout = QHBoxLayout()
-        layout.addWidget(image)
-        layout.addWidget(heading)
+        # adding to layout using grid with alignment
+        layout = QGridLayout()
+        layout.addWidget(image, 0, 0, 1, 1, Qt.AlignCenter)  # 10% space for image
+        layout.addWidget(heading, 0, 1, 1, 9, Qt.AlignCenter)  # 90% space for heading
 
         # load the layout on app
         layout.setContentsMargins(0, 0, 0, 0)
@@ -37,28 +32,34 @@ class PreviewResults(QWidget):
     def __init__(self, image_paths: list):
         super().__init__()
 
-        preview_image_dimension = 90
-
-        heading = QLabel(text='<font size=20>Preview Results</font>')
+        # create child components
+        heading = QLabel('Preview Results')
+        heading.setFont(QFont().setPixelSize(20))
         heading.setAlignment(Qt.AlignCenter)
-        preview_images_container = QScrollArea()
-        preview_images_container.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        preview_images_container.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
+        # issue: QScrollArea not getting activated
+        preview_images_container = QScrollArea()
+        preview_images_container.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        preview_images_container.setWidgetResizable(True)
+        # layout to be added to scroll area
         preview_images_layout = QGridLayout()
-        preview_images_layout.setContentsMargins(0, 0, 0, 0)
-        row, col, col_count = 0, 0, 5
+
+        preview_image_dimension = 100
+        row, col, col_count = 0, 0, 4
         for img_path in image_paths:
             img_label = QLabel()
-            img_label.setPixmap(QPixmap(img_path).scaledToHeight(preview_image_dimension))
-            img_label.setFixedSize(preview_image_dimension, preview_image_dimension)
-            preview_images_layout.addWidget(img_label, row, col)
-            col += 1
-            row += int(col / col_count)
-            col %= col_count
+            img_label.setPixmap(QPixmap(img_path).scaledToWidth(preview_image_dimension))
+            preview_images_layout.addWidget(img_label, row, col, 1, 1, Qt.AlignJustify)
+            # go to next row and column
+            col = int(col + 1)
+            row = int(row + int(col / col_count))
+            col = int(col - int(col / col_count) * col_count)
 
-        preview_images_container.setLayout(preview_images_layout)
+        images_widget = QWidget()
+        images_widget.setLayout(preview_images_layout)
+        preview_images_container.setWidget(images_widget)
 
+        # layout for 'self'
         layout = QVBoxLayout()
         layout.addWidget(heading)
         layout.addWidget(preview_images_container)
@@ -72,32 +73,31 @@ class MainContainer(QFrame):
     def handle_choose_images(self):
         user_input = QFileDialog.getOpenFileNames(self, 'Choose Images', '', 'Image Files (*.png *.jpeg *.jpg)')[0]
         # issue: state management and component update
-        # possible solution: using QtModel
+        # possible solution: using QtModel and QtStateMachine
         self.image_files_list = user_input  # todo
 
     def __init__(self):
         super().__init__()
-        self.resize(1000, 550)
 
         # issue: state management and component update
-        # possible solution: using QtModel
-        self.image_files_list = []  # will be populated later by user
+        # possible solution: using QtModel and QtStateMachine
+        # component state
+        self.image_files_list = []      # will be populated later by user
+        self.handle_choose_images()     # to be removed later only for testing purpose as state is not getting updated
 
         # create components
-        self.manipulation_options = QPushButton('Choose images')
-        self.manipulation_options.setFixedWidth(500)  # to be removed later
-        self.manipulation_options.clicked.connect(self.handle_choose_images)
+        manipulation_options = QPushButton('Choose images')
+        manipulation_options.clicked.connect(self.handle_choose_images)
+        manipulation_options.setFixedWidth(500)  # to be removed later
+
         self.preview_results = PreviewResults(self.image_files_list)
 
-        # todo
         # add to layout
         layout = QHBoxLayout()
-        layout.addWidget(self.manipulation_options)
+        layout.addWidget(manipulation_options)
         layout.addWidget(self.preview_results)
-        # todo
 
         # load the layout on the app
-        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
 
@@ -128,7 +128,7 @@ def change_dataset_gui():
     main_window = MainWindow()
     main_window.resize(1000, 625)
     main_window.setWindowIcon(QIcon('resources/images/app_icon.ico'))
-    main_window.setWindowTitle('Manipulate and Update Dataset')
+    main_window.setWindowTitle('Manipulate (add augmentation) and Update Dataset')
     main_window.show()
 
     sys.exit(app.exec_())
